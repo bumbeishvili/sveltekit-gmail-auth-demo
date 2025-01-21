@@ -146,6 +146,7 @@
         name: authData.user?.name || allData.name,
         picture: authData.user?.picture || allData.picture,
         token: authData.user?.token || allData.token,
+        dataLink: authData.user?.dataLink || allData.dataLink,
       };
 
       // Modify the picture URL
@@ -159,6 +160,7 @@
         name: allData.name,
         picture: modifiedPicture,
         token: allData.token,
+        dataLink: allData.dataLink,
       });
       console.log("User Store Updated");
       goto("/", { invalidateAll: true });
