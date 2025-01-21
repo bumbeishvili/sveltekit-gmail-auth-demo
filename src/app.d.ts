@@ -7,3 +7,21 @@ declare namespace App {
 	// interface PageData {}
 	// interface Platform {}
 }
+
+/// <reference types="@sveltejs/kit" />
+
+declare global {
+    interface Window {
+        google: {
+            accounts: {
+                id: {
+                    initialize: (config: any) => void;
+                    renderButton: (element: HTMLElement, options: any) => void;
+                    prompt: () => void;
+                };
+            };
+        };
+    }
+}
+
+export {};
