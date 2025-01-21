@@ -6,9 +6,15 @@ declare namespace App {
 	// interface Locals {}
 	// interface PageData {}
 	// interface Platform {}
+	interface Locals {
+		user: GoogleUser | null;
+		session: ServerSession | null;
+	}
 }
 
 /// <reference types="@sveltejs/kit" />
+
+import type { GoogleUser, ServerSession } from '$lib/types';
 
 declare global {
     interface Window {
