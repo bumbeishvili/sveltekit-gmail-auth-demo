@@ -1,20 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import * as d3 from "d3";
   import { user } from "$lib/stores/auth";
-  import type { GoogleUser, SpreadsheetRow } from "$lib/types";
   import type { PageData } from "./$types";
   import { goto } from "$app/navigation";
 
   export let data: PageData;
 
-  let finalData: any[] = [];
   let loading = true;
   let error: string | null = null;
 
-  const SPREADSHEET_URL =
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6hmCR_BMArUDnOpmc3ir3dGS3VQ4uBNaSOhuNFuuo_VUQgS-ovKYgGlNuJjs4Eq61ddNkECz-bynp/pub?gid=0&single=true&output=csv";
-
+ 
   let googleScriptLoaded = false;
 
   async function initializeGoogleAuth() {
@@ -104,7 +99,8 @@
       user.set({ email, name, picture: modifiedPicture });
 
       // Use SvelteKit navigation instead of window.location.reload()
-      await goto("/", { invalidateAll: true });
+      // await goto("/", { invalidateAll: true });
+      window.location.reload();
     } catch (err) {
       error = "Authentication failed. Please try again.";
       console.error(err);
