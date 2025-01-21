@@ -19,10 +19,10 @@
       console.log("User Details Received:", data.userDetails);
       allData = {
         ...allData,
-        email: data.userDetails.email,
-        name: data.userDetails.name,
-        picture: data.userDetails.picture,
-        dataLink: data.userDetails.dataLink,
+        email: data.userDetails.email || allData.email,
+        name: data.userDetails.name || allData.name,
+        picture: data.userDetails.picture || allData.picture,
+        dataLink: data.userDetails.dataLink || allData.dataLink,
       };
       console.log("Updated allData:", allData);
     }
@@ -140,17 +140,25 @@
         return;
       }
 
+      allData = {
+        ...allData,
+        email: authData.user?.email || allData.email,
+        name: authData.user?.name || allData.name,
+        picture: authData.user?.picture || allData.picture,
+        token: authData.user?.token || allData.token,
+      };
+
       // Modify the picture URL
-      const baseUrl = picture.split("?")[0];
+      const baseUrl = allData?.picture?.split("?")[0];
       const modifiedPicture = `${baseUrl}?sz=96`;
       console.log("Modified Picture URL:", modifiedPicture);
 
       // Store user info in client-side store, including token
       user.set({
-        email,
-        name,
+        email: allData.email,
+        name: allData.name,
         picture: modifiedPicture,
-        token,
+        token: allData.token,
       });
       console.log("User Store Updated");
       goto("/", { invalidateAll: true });
