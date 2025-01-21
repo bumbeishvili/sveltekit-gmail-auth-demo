@@ -68,26 +68,42 @@
   async function handleCredentialResponse(response: any) {
     try {
       const token = response.credential;
-      
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map((c) => {
+            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join("")
+      );
+
+      const { email, name, picture } = JSON.parse(jsonPayload);
+
       const authResponse = await fetch("/api/auth", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ token })
+        body: JSON.stringify({ email, name, picture, token }),
       });
-      
+
       const authData = await authResponse.json();
-      
+
       if (!authData.success) {
         error = authData.error;
         return;
       }
 
-      // Store user info from verified response
-      user.set(authData.user);
-      
-      // Use SvelteKit navigation
+      // Modify the picture URL
+      const baseUrl = picture.split("?")[0];
+      const modifiedPicture = `${baseUrl}?sz=96`;
+
+      // Store user info in client-side store
+      user.set({ email, name, picture: modifiedPicture });
+
+      // Use SvelteKit navigation instead of window.location.reload()
       await goto("/", { invalidateAll: true });
     } catch (err) {
       error = "Authentication failed. Please try again.";
@@ -132,12 +148,19 @@
   class="w-full min-h-screen bg-gray-50 flex justify-center items-center"
 >
   <div class="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-    
+    {#if $user && data.userData}
+      <h1 class="text-2xl font-bold mb-6 text-center">Hi, {$user.name}!</h1>
+
+      Here is your final data
+      <pre>{JSON.stringify(data.userData, null, 2)}</pre>
+    {:else}
+      <h1 class="text-2xl font-bold mb-6 text-center">Hi, please login</h1>
+    {/if}
 
     {#if data}
-	  Current Data
+		Here is  your data 
 		
-      <pre class='bg-gray-50 mb-5 mt-3'>{JSON.stringify(data, null, 2)}</pre>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
     {/if}
 
     {#if loading}
