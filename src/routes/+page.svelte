@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import * as d3 from "d3";
   import { user } from "$lib/stores/auth";
   import type { PageData } from "./$types";
   import { goto } from "$app/navigation";
@@ -12,23 +13,48 @@
 
   let googleScriptLoaded = false;
 
-  $:{
-    data;
-    allData = { ...allData, data };
+  // Log when data changes
+  $: {
+    if (data.userDetails) {
+      console.log("User Details Received:", data.userDetails);
+      allData = {
+        ...allData,
+        email: data.userDetails.email,
+        name: data.userDetails.name,
+        picture: data.userDetails.picture,
+        dataLink: data.userDetails.dataLink,
+      };
+      console.log("Updated allData:", allData);
+    }
+  }
+
+  let finalData = [];
+
+  $: {
+    console.log("all data changed", { allData });
+    if (allData.dataLink) {
+      d3.csv(allData.dataLink).then((data) => {
+        console.log("Data Loaded:", data);
+        finalData = data;
+      });
+    }
   }
 
   async function initializeGoogleAuth() {
+    console.log("Initializing Google Auth");
     const clientId =
       "382380825029-rnd0cj6b98nvf2ctd3kceohfjvo3m7ia.apps.googleusercontent.com";
 
     return new Promise<void>((resolve) => {
+      console.log("Checking Google Identity Services");
       if (!window.google || !window.google.accounts) {
-        console.error("Google Identity Services not loaded");
+        console.log("Google Identity Services not loaded");
         error = "Google authentication services failed to load";
         return;
       }
 
       try {
+        console.log("Initializing Google Accounts");
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: handleCredentialResponse,
@@ -38,8 +64,10 @@
         });
 
         setTimeout(() => {
+          console.log("Attempting to render Google Button");
           const buttonElement = document.getElementById("googleButton");
           if (buttonElement) {
+            console.log("Google Button Element Found");
             window.google.accounts.id.renderButton(buttonElement, {
               type: "standard",
               theme: "outline",
@@ -49,15 +77,15 @@
               logo_alignment: "left",
               width: 250,
             });
+            googleScriptLoaded = true;
+            console.log("Google Button Rendered");
           } else {
-            console.error("Google button element not found");
+            console.log("Google button element not found");
             error = "Failed to render login button";
           }
         }, 100);
-
-        googleScriptLoaded = true;
       } catch (err) {
-        console.error("Error initializing Google Auth:", err);
+        console.log("Error initializing Google Auth:", err);
         error = "Failed to initialize Google authentication";
       }
 
@@ -66,8 +94,10 @@
   }
 
   async function handleCredentialResponse(response: any) {
+    console.log("Credential Response Received:", response);
     try {
       const token = response.credential;
+      console.log("Decoding JWT Token");
       const base64Url = token.split(".")[1];
       const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
       const jsonPayload = decodeURIComponent(
@@ -80,9 +110,19 @@
       );
 
       const { email, name, picture } = JSON.parse(jsonPayload);
+      console.log("Decoded Payload:", { email, name, picture });
 
-      allData = {...allData, email, name, picture, token };
+      allData = {
+        ...allData,
+        email: email || allData.email,
+        name: name || allData.name,
+        picture: picture || allData.picture,
+        token: token || allData.token,
+      };
 
+      console.log("Updated allData after credential response:", allData);
+
+      console.log("Sending Auth Request to Server");
       const authResponse = await fetch("/api/auth", {
         method: "POST",
         headers: {
@@ -92,8 +132,10 @@
       });
 
       const authData = await authResponse.json();
+      console.log("Auth Response:", authData);
 
       if (!authData.success) {
+        console.log("Auth Failed:", authData.error);
         error = authData.error;
         return;
       }
@@ -101,42 +143,50 @@
       // Modify the picture URL
       const baseUrl = picture.split("?")[0];
       const modifiedPicture = `${baseUrl}?sz=96`;
+      console.log("Modified Picture URL:", modifiedPicture);
 
-      // Store user info in client-side store
-      user.set({ email, name, picture: modifiedPicture });
-
-      // Use SvelteKit navigation instead of window.location.reload()
-      // await goto("/", { invalidateAll: true });
-      //window.location.reload();
+      // Store user info in client-side store, including token
+      user.set({
+        email,
+        name,
+        picture: modifiedPicture,
+        token,
+      });
+      console.log("User Store Updated");
+      goto("/", { invalidateAll: true });
     } catch (err) {
+      console.log("Authentication Error:", err);
       error = "Authentication failed. Please try again.";
-      console.error(err);
     }
   }
 
-  // Add a function to handle image loading
   function handleImageError(event: Event) {
+    console.log("Image Error Event:", event);
     const imgElement = event.target as HTMLImageElement;
     if (!imgElement.dataset.retried) {
-      // Try once with a different size
+      console.log(
+        "First image load attempt failed, retrying with different size"
+      );
       imgElement.dataset.retried = "true";
       imgElement.src = `${imgElement.src.split("?")[0]}?sz=64`;
     } else {
-      // If retry failed, use default avatar
+      console.log("Image load retry failed, using default avatar");
       imgElement.src =
         "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
-      imgElement.onerror = null; // Prevent further retries
+      imgElement.onerror = null;
     }
   }
 
   onMount(async () => {
+    console.log("Component Mounted");
     try {
       await initializeGoogleAuth();
     } catch (err) {
+      console.log("Google Auth Initialization Error:", err);
       error = "Failed to initialize Google authentication.";
-      console.error(err);
     } finally {
       loading = false;
+      console.log("Loading Complete");
     }
   });
 </script>
@@ -151,8 +201,7 @@
   class="w-full min-h-screen bg-gray-50 flex justify-center items-center"
 >
   <div class="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-    <pre>{JSON.stringify(allData, null, 2)} </pre>
-    
+    <pre>{JSON.stringify({ allData, finalData }, null, 2)} </pre>
 
     {#if loading}
       <div class="text-center">Loading...</div>
