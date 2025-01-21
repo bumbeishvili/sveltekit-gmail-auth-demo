@@ -4,13 +4,18 @@
   import type { PageData } from "./$types";
   import { goto } from "$app/navigation";
 
+  let allData = {};
   export let data: PageData;
 
   let loading = true;
   let error: string | null = null;
 
- 
   let googleScriptLoaded = false;
+
+  $:{
+    data;
+    allData = { ...allData, data };
+  }
 
   async function initializeGoogleAuth() {
     const clientId =
@@ -76,6 +81,8 @@
 
       const { email, name, picture } = JSON.parse(jsonPayload);
 
+      allData = {...allData, email, name, picture, token };
+
       const authResponse = await fetch("/api/auth", {
         method: "POST",
         headers: {
@@ -100,7 +107,7 @@
 
       // Use SvelteKit navigation instead of window.location.reload()
       // await goto("/", { invalidateAll: true });
-      window.location.reload();
+      //window.location.reload();
     } catch (err) {
       error = "Authentication failed. Please try again.";
       console.error(err);
@@ -144,20 +151,8 @@
   class="w-full min-h-screen bg-gray-50 flex justify-center items-center"
 >
   <div class="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-    {#if $user && data.userData}
-      <h1 class="text-2xl font-bold mb-6 text-center">Hi, {$user.name}!</h1>
-
-      Here is your final data
-      <pre>{JSON.stringify(data.userData, null, 2)}</pre>
-    {:else}
-      <h1 class="text-2xl font-bold mb-6 text-center">Hi, please login</h1>
-    {/if}
-
-    {#if data}
-		Here is  your data 
-		
-      <pre>{JSON.stringify(data, null, 2)}</pre>
-    {/if}
+    <pre>{JSON.stringify(allData, null, 2)} </pre>
+    
 
     {#if loading}
       <div class="text-center">Loading...</div>
